@@ -18,6 +18,7 @@ import {
   type ResponseOutputText,
   type ResponseFunctionToolCallItem,
   type ResponseFunctionCallOutputItem,
+  type Tool,
 } from "~/services/copilot/create-responses"
 
 import {
@@ -194,10 +195,7 @@ const flushPendingContent = (
     return
   }
 
-  const messageContent =
-    pendingContent.length === 1 && isPlainText(pendingContent[0]) ?
-      pendingContent[0].text
-    : [...pendingContent]
+  const messageContent = [...pendingContent]
 
   target.push(createMessage(role, messageContent))
   pendingContent.length = 0
@@ -227,6 +225,7 @@ const createImageContent = (
 ): ResponseInputImage => ({
   type: "input_image",
   image_url: `data:${block.source.media_type};base64,${block.source.data}`,
+  detail: "auto",
 })
 
 const createReasoningContent = (
@@ -300,7 +299,7 @@ When using the TodoWrite tool, follow these rules:
 
 const convertAnthropicTools = (
   tools: Array<AnthropicTool> | undefined,
-): Array<Record<string, unknown>> | null => {
+): Array<Tool> | null => {
   if (!tools || tools.length === 0) {
     return null
   }
@@ -338,20 +337,6 @@ const convertAnthropicToolChoice = (
       return undefined
     }
   }
-}
-
-const isPlainText = (
-  content: ResponseInputContent,
-): content is ResponseInputText | { text: string } => {
-  if (typeof content !== "object") {
-    return false
-  }
-
-  return (
-    "text" in content
-    && typeof (content as ResponseInputText).text === "string"
-    && !("image_url" in content)
-  )
 }
 
 export const translateResponsesResultToAnthropic = (
@@ -483,7 +468,7 @@ const extractReasoningText = (item: ResponseOutputReasoning): string => {
 const createToolUseContentBlock = (
   call: ResponseOutputFunctionCall,
 ): AnthropicToolUseBlock | null => {
-  const toolId = call.call_id ?? call.id
+  const toolId = call.call_id
   if (!call.name || !toolId) {
     return null
   }
