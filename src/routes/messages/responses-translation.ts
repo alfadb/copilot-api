@@ -18,6 +18,9 @@ import {
   type ResponseOutputText,
   type ResponseFunctionToolCallItem,
   type ResponseFunctionCallOutputItem,
+  type Tool,
+  type ToolChoiceFunction,
+  type ToolChoiceOptions,
 } from "~/services/copilot/create-responses"
 
 import {
@@ -194,10 +197,7 @@ const flushPendingContent = (
     return
   }
 
-  const messageContent =
-    pendingContent.length === 1 && isPlainText(pendingContent[0]) ?
-      pendingContent[0].text
-    : [...pendingContent]
+  const messageContent = [...pendingContent]
 
   target.push(createMessage(role, messageContent))
   pendingContent.length = 0
@@ -227,6 +227,7 @@ const createImageContent = (
 ): ResponseInputImage => ({
   type: "input_image",
   image_url: `data:${block.source.media_type};base64,${block.source.data}`,
+  detail: "auto",
 })
 
 const createReasoningContent = (
@@ -300,7 +301,7 @@ When using the TodoWrite tool, follow these rules:
 
 const convertAnthropicTools = (
   tools: Array<AnthropicTool> | undefined,
-): Array<Record<string, unknown>> | null => {
+): Array<Tool> | null => {
   if (!tools || tools.length === 0) {
     return null
   }
@@ -316,9 +317,9 @@ const convertAnthropicTools = (
 
 const convertAnthropicToolChoice = (
   choice: AnthropicMessagesPayload["tool_choice"],
-): unknown => {
+): ToolChoiceOptions | ToolChoiceFunction => {
   if (!choice) {
-    return undefined
+    return "auto"
   }
 
   switch (choice.type) {
@@ -329,29 +330,15 @@ const convertAnthropicToolChoice = (
       return "required"
     }
     case "tool": {
-      return choice.name ? { type: "function", name: choice.name } : undefined
+      return choice.name ? { type: "function", name: choice.name } : "auto"
     }
     case "none": {
       return "none"
     }
     default: {
-      return undefined
+      return "auto"
     }
   }
-}
-
-const isPlainText = (
-  content: ResponseInputContent,
-): content is ResponseInputText | { text: string } => {
-  if (typeof content !== "object") {
-    return false
-  }
-
-  return (
-    "text" in content
-    && typeof (content as ResponseInputText).text === "string"
-    && !("image_url" in content)
-  )
 }
 
 export const translateResponsesResultToAnthropic = (
@@ -483,7 +470,7 @@ const extractReasoningText = (item: ResponseOutputReasoning): string => {
 const createToolUseContentBlock = (
   call: ResponseOutputFunctionCall,
 ): AnthropicToolUseBlock | null => {
-  const toolId = call.call_id ?? call.id
+  const toolId = call.call_id
   if (!call.name || !toolId) {
     return null
   }
@@ -555,9 +542,6 @@ const mapResponsesStopReason = (
     }
     if (incompleteDetails?.reason === "content_filter") {
       return "end_turn"
-    }
-    if (incompleteDetails?.reason === "tool_use") {
-      return "tool_use"
     }
   }
 
