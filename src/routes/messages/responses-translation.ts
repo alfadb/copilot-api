@@ -19,6 +19,8 @@ import {
   type ResponseFunctionToolCallItem,
   type ResponseFunctionCallOutputItem,
   type Tool,
+  type ToolChoiceFunction,
+  type ToolChoiceOptions,
 } from "~/services/copilot/create-responses"
 
 import {
@@ -315,9 +317,9 @@ const convertAnthropicTools = (
 
 const convertAnthropicToolChoice = (
   choice: AnthropicMessagesPayload["tool_choice"],
-): unknown => {
+): ToolChoiceOptions | ToolChoiceFunction => {
   if (!choice) {
-    return undefined
+    return "auto"
   }
 
   switch (choice.type) {
@@ -328,13 +330,13 @@ const convertAnthropicToolChoice = (
       return "required"
     }
     case "tool": {
-      return choice.name ? { type: "function", name: choice.name } : undefined
+      return choice.name ? { type: "function", name: choice.name } : "auto"
     }
     case "none": {
       return "none"
     }
     default: {
-      return undefined
+      return "auto"
     }
   }
 }
@@ -540,9 +542,6 @@ const mapResponsesStopReason = (
     }
     if (incompleteDetails?.reason === "content_filter") {
       return "end_turn"
-    }
-    if (incompleteDetails?.reason === "tool_use") {
-      return "tool_use"
     }
   }
 

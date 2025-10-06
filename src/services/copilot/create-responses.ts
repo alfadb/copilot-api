@@ -10,11 +10,11 @@ export interface ResponsesPayload {
   instructions?: string | null
   input?: string | Array<ResponseInputItem>
   tools?: Array<Tool> | null
-  tool_choice?: unknown
+  tool_choice?: ToolChoiceOptions | ToolChoiceFunction
   temperature?: number | null
   top_p?: number | null
   max_output_tokens?: number | null
-  metadata?: Record<string, unknown> | null
+  metadata?: Metadata | null
   stream?: boolean | null
   safety_identifier?: string | null
   prompt_cache_key?: string | null
@@ -23,6 +23,13 @@ export interface ResponsesPayload {
   reasoning?: Reasoning | null
   include?: Array<ResponseIncludable>
   [key: string]: unknown
+}
+
+export type ToolChoiceOptions = "none" | "auto" | "required"
+
+export interface ToolChoiceFunction {
+  name: string
+  type: "function"
 }
 
 export type Tool = FunctionTool
@@ -112,14 +119,20 @@ export interface ResponsesResult {
   status: string
   usage?: ResponseUsage | null
   error: ResponseError | null
-  incomplete_details: Record<string, unknown> | null
+  incomplete_details: IncompleteDetails | null
   instructions: string | null
-  metadata: Record<string, unknown> | null
+  metadata: Metadata | null
   parallel_tool_calls: boolean
   temperature: number | null
   tool_choice: unknown
-  tools: Array<Record<string, unknown>>
+  tools: Array<Tool>
   top_p: number | null
+}
+
+export type Metadata = { [key: string]: string }
+
+export interface IncompleteDetails {
+  reason?: "max_output_tokens" | "content_filter"
 }
 
 export interface ResponseError {
